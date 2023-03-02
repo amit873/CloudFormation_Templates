@@ -1,0 +1,25 @@
+Rules:
+  Rule01:
+    Assertions:
+      - Assert:
+        rule-specific intrinsic function: Value01
+      AssertDescription: 'Information about this assert'
+  Rule02:
+    RuleCondition: 
+      rule-specific intrinsic function: Value02
+      - test
+    Assertions:
+      - Assert:
+          rule-specific intrinsic function: Value03
+        AssertDescription: 'Information about this assert'
+      - Assert: 
+          rule-specific intrinsic function: Value04
+        AssertDescription: 'Information about this assert'
+
+
+
+Metadata:
+  Instances:
+    Description: "Information about the instances"
+  Databases: 
+    Description: "Information about the databases"

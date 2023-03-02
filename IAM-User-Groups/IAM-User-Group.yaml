@@ -1,0 +1,62 @@
+---
+  AWSTemplateFormatVersion: "2010-09-09"
+
+  Description: "IAM Users and Groups"
+
+  Parameters:
+    Password:
+      NoEcho: 'true'
+      Type: String
+      Description: New Account Password
+      MinLength: '4'
+      MaxLength: '20'
+      ConstraintDescription: The password must be between 1 and 41 characters
+
+  Resources:
+    # Creates a new IAM user
+    CFNUser:
+      Type: AWS::IAM::User
+      Properties:
+        LoginProfile:
+          Password: !Ref 'Password'
+    
+    # Creates a new group
+    CFNUserGroup:
+      Type: AWS::IAM::Group
+    
+    # Creates a new group
+    CFNAdminGroup:
+      Type: AWS::IAM::Group
+    
+    #  Adds the specified user to the specified group
+    Users:
+      Type: AWS::IAM::UserToGroupAddition
+      Properties:
+        GroupName: !Ref 'CFNUserGroup'
+        Users: [!Ref 'CFNUser']
+    
+    Admins:
+      Type: AWS::IAM::UserToGroupAddition
+      Properties:
+        GroupName: !Ref 'CFNAdminGroup'
+        Users: [!Ref 'CFNUser']
+           
+    # Creates a new AWS secret access key
+    CFNKeys:
+      Type: AWS::IAM::AccessKey
+      Properties:
+        UserName: !Ref 'CFNUser'
+
+  # Ouput
+  Outputs:
+    AccessKey:
+      Value: !Ref 'CFNKeys'
+      Description: AWS Access Key ID of New User
+
+    SecretKey:
+      Value: !GetAtt [CFNKeys, SecretAccessKey]
+      Description: AWS Securet Access Key of new User
+
+
+
+      

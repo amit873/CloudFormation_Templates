@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Example CFT to deploy Lambda functions"
+
+Parameters:
+  s3CodeBucket:
+    Type: String
+    Description: S3 Code bucket with lamba code is stored
+
+  LambdaCode:
+    Type: String
+    Description: Zipped copy of lambda function (note LambdaCode is hard coded into the CFT. If you change the name you need to update line 44 to reflect the new name)
+    Default: LambdaCode.zip
+
+Resources:
+# Lambda Role
+#
+  LambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub 'arn:aws:iam::${AWS::AccountId}:policy/cft-developer-boundary-policy'
+      RoleName: delegate-admin-lambda-function-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+
+# Lambda Function
+#
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: LambdaFunctionRole
+    Properties:
+      Code:
+        S3Bucket: !Ref s3CodeBucket
+        S3Key: !Ref LambdaCode
+      Description: "Lambda example code"
+      FunctionName: alf-lambda-example
+      Handler: LambdaCode.lambda_handler
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-lambda-function-role'
+      Runtime: python3.8
+      KmsKeyArn: 'alias/aws/lambda'
+      key_type: 'KMS'
+      Tags:
+        - Key: "costCenter"
+          Value: " "
+        - Key: "iServerID"
+          Value: " "
+        - Key: "dataClassification"
+          Value: "public"
+        - Key: "supportGroup"
+          Value: "PSS_AmazonWebServices"
+        - Key: "assignmentGroup"
+          Value: "PSS_AmazonWebServices"
+      Timeout: 60
+
+  LambdaFunctionPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  LambdaFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - '/aws/lambda/${log_group}'
+        - {log_group: !Ref LambdaFunction}
+      RetentionInDays: 7

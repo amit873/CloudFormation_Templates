@@ -1,0 +1,73 @@
+# Unit Test Cases for ddl-dynamodb-encryption
+---
+- name: MyTest1
+  input: {}
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: SKIP
+- name: MyTest2
+  input:
+     Resources: {}
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: SKIP
+- name: MyTest3
+  input:
+    Resources: 
+      dynamodb:
+        Type: AWS::DynamoDB::Table
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: FAIL
+- name: MyTest4
+  input:
+    Resources: 
+      dynamodb:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          SSESpecification:
+            SSEEnabled: true
+            KMSMasterKeyId: alias/KMS-Amit
+            SSEType: KMS
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: PASS
+- name: MyTest5
+  input:
+    Resources: 
+      dynamodb:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          SSESpecification:
+            SSEEnabled: false
+            KMSMasterKeyId: alias/KMS-Amit
+            SSEType: KMS
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: FAIL
+- name: MyTest6
+  input:
+    Resources: 
+      dynamodb:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          SSESpecification:
+            SSEEnabled: true
+            KMSMasterKeyId: alias/aws/dynamodb
+            SSEType: KMS
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: PASS
+- name: MyTest6
+  input:
+    Resources: 
+      dynamodb:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          SSESpecification:
+            SSEEnabled: false
+            KMSMasterKeyId: alias/aws/dynamodb
+            SSEType: KMS
+  expectations:
+    rules:
+      ameintu_dynamo_db_encryption: FAIL

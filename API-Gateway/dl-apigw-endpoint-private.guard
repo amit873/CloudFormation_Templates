@@ -1,0 +1,11 @@
+#
+# This document is used to ApiGateway instances deployed must be private
+#
+
+let apigw_endpoint_private = Resources.*[ Type == 'AWS::ApiGateway::RestApi' ]                             
+
+rule ameintu_apigw_endpoint_private when %apigw_endpoint_private !empty {                                       
+  %apigw_endpoint_private {
+    Properties.EndpointConfiguration.Types[*] == "PRIVATE"                                
+  }   
+}    

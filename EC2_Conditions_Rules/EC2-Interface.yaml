@@ -1,0 +1,51 @@
+
+Parameters:
+  InstanceType:
+    Description: EC2 instance type.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+  SubnetID:
+    Description: Subnet ID
+    Type: AWS::EC2::Subnet::Id
+  SecurityGroupID:
+    Description: Security Group
+    Type: AWS::EC2::SecurityGroup::Id
+  
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref SecurityGroupID
+      SubnetId: !Ref SubnetID
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - SubnetID
+          - SecurityGroupID
+      - Label:
+          default: "Amazon EC2 Configuration"
+        Parameters:
+          - InstanceType
+    ParameterLabels:
+      SubnetID:
+        default: "Which subnet should this be deployed to?"

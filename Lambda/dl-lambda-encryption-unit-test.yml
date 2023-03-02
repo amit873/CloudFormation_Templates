@@ -1,0 +1,365 @@
+---
+# when no resources are defined
+- name: No_resource
+  input:
+    Resources: {}
+  expectations:
+    rules:
+      assert_resource_tags: SKIP
+      lambda_tags_key: SKIP
+      lambda_tags_value: SKIP
+      encryption_case1: SKIP
+      encryption_case2: SKIP
+
+# when resource defined but no tags
+- name: MyTest2
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          KmsKeyArn: alias/aws/lambda
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: FAIL
+      lambda_tags_key: SKIP
+      lambda_tags_value: SKIP
+      encryption_case1: SKIP
+      encryption_case2: SKIP
+
+# when tags key value is public & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest3
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: public
+          
+          KmsKeyArn: alias/aws/lambda
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is confidential & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest4
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: confidential
+      
+          KmsKeyArn: alias/aws/lambda
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is internal & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest5
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: internal
+          KmsKeyArn: alias/aws/lambda
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is restricted & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest6
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: restricted
+          KmsKeyArn: alias/aws/lambda
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: PASS
+      encryption_case2: SKIP
+
+# when tags key value is restricted & encryption_type is KMS with encryption_enable as true
+- name: MyTest7
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: restricted
+          
+          KmsKeyArn: alias/aws/lambda
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: FAIL
+      encryption_case2: SKIP
+
+# when tags key value is public & encryption_type is KMS with encryption_enable as true
+- name: MyTest8
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: public
+          
+          KmsKeyArn: alias/aws/lambda
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: PASS
+    
+# when tags key value is internal & encryption_type is KMS with encryption_enable as true
+
+- name: MyTest9
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: internal
+          
+          KmsKeyArn: alias/aws/lambda
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: PASS
+
+# when tags key value is confidential & encryption_type is KMS with encryption_enable as true
+- name: MyTest10
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: confidential
+          
+          KmsKeyArn: alias/aws/lambda
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: PASS
+
+# when tags key value is public & encryption_type is AWS_CLOUDHSM with encryption_enable as false
+- name: MyTest11
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: public
+          
+          KmsKeyArn: false
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is confidential & encryption_type is AWS_CLOUDHSM with encryption_enable as false
+- name: MyTest12
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: confidential
+          
+          KmsKeyArn: false
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is internal & encryption_type is AWS_CLOUDHSM with encryption_enable as false
+- name: MyTest13
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: internal
+          
+          KmsKeyArn: false
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is restricted & encryption_type is AWS_CLOUDHSM with encryption_enable as false
+- name: MyTest14
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: restricted
+          
+          KmsKeyArn: false
+          key_type: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: FAIL
+      encryption_case2: SKIP
+
+# when tags key value is restricted & encryption_type is KMS with encryption_enable as false
+- name: MyTest15
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: restricted
+          
+          KmsKeyArn: false
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: FAIL
+      encryption_case2: SKIP
+
+# when tags key value is public & encryption_type is KMS with encryption_enable as false
+- name: MyTest16
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: public
+          
+          KmsKeyArn: false
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+    
+# when tags key value is internal & encryption_type is KMS with encryption_enable as false
+
+- name: MyTest17
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: internal
+          
+          KmsKeyArn: false
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is confidential & encryption_type is KMS with encryption_enable as false
+- name: MyTest18
+  input:
+    Resources: 
+      ddb:
+        Type: 'AWS::Lambda::Function'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: confidential
+          
+          KmsKeyArn: false
+          key_type: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      lambda_tags_key: PASS
+      lambda_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL

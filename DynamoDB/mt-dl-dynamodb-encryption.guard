@@ -1,0 +1,45 @@
+
+# Select all DDB resources from the incoming template (payload)
+#
+let ddb = Resources.*[ Type == 'AWS::DynamoDB::Table'  ]
+let allowed_db_classification_tags = [ 'public', 'internal', 'confidential', 'restricted' ]
+
+#
+# Common rule, all resources must have Tags present on them
+#
+rule assert_resource_tags when %ddb !empty {
+    Resources.*.Properties.Tags !empty
+}
+
+
+rule ddb_tags_key when assert_resource_tags {
+    %ddb.Properties.Tags.*[ Key == 'dataClassification' ] !empty
+}
+
+rule ddb_tags_value when ddb_tags_key {
+    %ddb.Properties.Tags.*[ Value in %allowed_db_classification_tags ] !empty
+}
+
+rule dynamo_db_sse_on when %ddb !empty
+{
+    #
+    # Enusre ALL DynamoDB Tables have encryption at rest turned on
+    #
+    assert_resource_tags
+    ddb_tags_value
+    %ddb.Properties.SSESpecification.SSEEnabled == true
+}
+
+
+# Only valid keys that are allowed are KMS, AWS_CLOUDHSM
+#
+let allowed_algorithms = [ "KMS","AWS_CLOUDHSM" ]
+
+rule dynamo_db_sse_on_with_encryption_type when %ddb !empty
+{
+
+    dynamo_db_sse_on
+    %ddb.Properties.SSESpecification {
+        SSEType in %allowed_algorithms
+}
+}

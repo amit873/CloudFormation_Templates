@@ -1,0 +1,41 @@
+# Unit Test Cases for dl-sns-encryption
+---
+- name: MyTest1
+  input: {}
+  expectations:
+    rules:
+      ameintu_sns_topic_encryption: SKIP
+- name: MyTest2
+  input:
+     Resources: {}
+  expectations:
+    rules:
+      ameintu_sns_topic_encryption: SKIP
+- name: MyTest3
+  input:
+    Resources: 
+      EncryptedSNSTopic:
+        Type: AWS::SNS::Topic
+  expectations:
+    rules:
+      ameintu_sns_topic_encryption: FAIL
+- name: MyTest4
+  input:
+    Resources: 
+      EncryptedSNSTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+          KmsMasterKeyId: 'alias/KMS-Amit'           
+  expectations:
+    rules:
+      ameintu_sns_topic_encryption: PASS
+- name: MyTest5
+  input:
+    Resources: 
+      EncryptedSNSTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+          KmsMasterKeyId: 'alias/aws/sns'            
+  expectations:
+    rules:
+      ameintu_sns_topic_encryption: PASS

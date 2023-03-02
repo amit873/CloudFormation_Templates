@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Log access requests for a specific S3 bucket
+
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: source-ameintu873
+      AccessControl: Private
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: testing-logs
+  
+  LoggingBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: logging-ameintu873
+      AccessControl: LogDeliveryWrite
+
+Outputs:
+  SourceBucketName:
+    Value: !Ref S3Bucket
+    Description: Name of the Source Amazon S3 bucket.
+  
+  LoggingBucketName :
+    Value: !Ref LoggingBucket
+    Description: Name of the Logging Amazon S3 bucket.

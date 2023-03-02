@@ -1,0 +1,40 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo template for Encrypted SNS Topic - CMK - Customer Managed Key
+
+Parameters:
+  NotificationEmailId:
+    Default: amitkumargupta@hotmail.com
+    Description: The email address  for Subscription
+    Type: String
+
+Resources:
+
+  EncryptedSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      #TopicName: !Sub "${AWS::StackName}-EncryptedSNSTopic"
+      TopicName: SNS-Topic-Name
+      KmsMasterKeyId: AWS_CLOUDHSM
+      Subscription:
+        - Endpoint: !Ref NotificationEmailId
+          Protocol: email
+      Tags:
+        - Key: "costCenter"
+          Value: "C8710ATG"
+        - Key: "iServerID"
+          Value: "D0020999"
+        - Key: "blockCode"
+          Value: "FOMOFLSFCN"
+        - Key: "dataClassification"
+          Value: "restricted"
+        - Key: "supportGroup"
+          Value: "PSS_AmazonWebServices"
+        - Key: "appCriticalityTier"
+          Value: "MC"  
+
+Outputs:
+  EmailID:
+    Value: !Ref NotificationEmailId
+  TopicArn:
+    Value: !Ref EncryptedSNSTopic

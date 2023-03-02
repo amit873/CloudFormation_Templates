@@ -1,0 +1,51 @@
+#
+# This document is used to SNS Encryption for both CMK and AMK keys
+#
+
+let snstopicencryption = Resources.*[ Type == 'AWS::SNS::Topic' ]
+let allowed_s3_classification_tags = [ 'public', 'internal', 'confidential', 'restricted' ]
+
+#
+# Common rule, all resources must have Tags present on them
+#
+rule assert_resource_tags {
+    Resources.*.Properties.Tags !empty
+}
+
+rule sns_tags_key when assert_resource_tags {
+    %snstopicencryption.Properties.Tags.*[ Key == 'dataClassification' ] !empty
+}
+
+rule sns_tags_value when sns_tags_key {
+    %snstopicencryption.Properties.Tags.*[ Value in %allowed_s3_classification_tags ] !empty
+}
+
+rule encryption_case1 when sns_tags_value {
+    let encryption_check = %snstopicencryption[
+        some Properties.Tags[*] {
+            Value == 'restricted'
+        }
+    ]
+
+    when %encryption_check !empty {
+        %encryption_check {            
+            Properties.KmsMasterKeyId == 'AWS_CLOUDHSM'
+        }
+    }
+}
+
+rule encryption_case2 when sns_tags_value {
+    let encryption_check = %snstopicencryption[
+        some Properties.Tags[*] {
+            Value == 'internal' or
+            Value == 'public' or
+            Value == 'confidential'
+        }
+    ]
+
+    when %encryption_check !empty {
+        %encryption_check {            
+            Properties.KmsMasterKeyId == 'KMS'
+        }
+    }
+}

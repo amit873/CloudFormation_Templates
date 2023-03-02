@@ -1,0 +1,93 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create EFS system and Mount Targets"
+Parameters:
+  VPC: 
+    Description: The VPC you want to deploy.
+    Type: 'AWS::EC2::VPC::Id'
+
+  SubnetID1:
+    Description: Select Subnet 1
+    Type: 'AWS::EC2::Subnet::Id'
+  
+  SubnetID2:
+    Description: Select Subnet 2
+    Type: 'AWS::EC2::Subnet::Id'
+  
+  SubnetID3:
+    Description: Select Subnet 3
+    Type: 'AWS::EC2::Subnet::Id'
+
+Resources:
+  EFSSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "security group for the EFS"
+      GroupName: "ameintu-EFS-SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress: 
+        Description: "servers to connect to efs"
+        FromPort: 2049
+        IpProtocol: tcp
+        ToPort: 2049
+           
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:      
+      BackupPolicy:
+        Status: ENABLED
+      Encrypted: true
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_60_DAYS
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+      FileSystemTags:
+        - Key: Name            
+          Value: ameintu-efs-file-system
+
+  MountTarget1: 
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: 
+        Ref: EFSFileSystem
+      SubnetId: 
+        Ref: SubnetID1
+      SecurityGroups: 
+        - Ref: EFSSecurityGroup
+
+  MountTarget2: 
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: 
+        Ref: EFSFileSystem
+      SubnetId: 
+        Ref: SubnetID2
+      SecurityGroups: 
+        - Ref: EFSSecurityGroup
+
+  MountTarget3: 
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: 
+        Ref: EFSFileSystem
+      SubnetId: 
+        Ref: SubnetID3
+      SecurityGroups: 
+        - Ref: EFSSecurityGroup
+        
+Outputs:
+  EFS:
+    Description: The created EFS 
+    Value: !Ref EFSFileSystem
+
+  EFSMountTarget1:
+    Description: The EFS MountTarget 1
+    Value: !Ref MountTarget1
+  
+  EFSMountTarget2:
+    Description: The EFS MountTarget 2
+    Value: !Ref MountTarget2
+
+  EFSMountTarget3:
+    Description: The EFS MountTarget 3
+    Value: !Ref MountTarget3

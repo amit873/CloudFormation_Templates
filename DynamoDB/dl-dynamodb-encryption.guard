@@ -1,0 +1,25 @@
+#
+# This document is used to DynamoDB Table Encryption for both CMK and AMK keys
+#
+
+let dynamodbencryption = Resources.*[ Type == 'AWS::DynamoDB::Table' ]
+let named_exception_resource_array = NAMED_EXCEPTION_RESOURCE_ARRAY  
+#let named_exception_resource_array = [ 'Employee-CMK', 'Employee-AMK' ]     
+
+rule ameintu_dynamo_db_encryption when %dynamodbencryption !empty {
+    %dynamodbencryption.Properties {
+        when TableName empty {
+            SSESpecification.SSEEnabled == true
+            SSESpecification.KMSMasterKeyId IN ['alias/aws/dynamodb','alias/KMS-Amit']
+            SSESpecification.SSEType == 'KMS'
+        }
+
+        when TableName !empty {
+            when TableName not IN %named_exception_resource_array {
+                SSESpecification.SSEEnabled == true
+                SSESpecification.KMSMasterKeyId IN ['alias/aws/dynamodb','alias/KMS-Amit']
+                SSESpecification.SSEType == 'KMS'
+            }
+        }
+    }
+}

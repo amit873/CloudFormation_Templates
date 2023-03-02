@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Metadata: 
+  License: Apache-2.0
+Description: 'AWS CloudFormation Sample Template DynamoDB_Secondary_Indexes: Create
+  a DynamoDB table with local and global secondary indexes.'
+Parameters:
+  ReadCapacityUnits:
+    Description: Provisioned read throughput
+    Type: Number
+    Default: '10'
+    MinValue: '10'
+    MaxValue: '10000'
+    ConstraintDescription: must be between 10 and 10000
+  WriteCapacityUnits:
+    Description: Provisioned write throughput
+    Type: Number
+    Default: '10'
+    MinValue: '10'
+    MaxValue: '10000'
+    ConstraintDescription: must be between 10 and 10000
+  DBTableName1:
+    Description: First Table Name for DynamoDB
+    Type: String
+    AllowedPattern: '[A-Z-a-z0-9]*'
+  DBTableName2:
+    Description: Second Table Name for DynamoDB. Do not provide any value if you are not creating second table.
+    Type: String
+    Default: ''
+    AllowedPattern: '[A-Z-a-z0-9]*'
+  CreatesecondTable:
+    Description: Whether you need to create second table?
+    Default: 'false'
+    Type: String
+    AllowedValues: ['true', 'false']
+
+Conditions:
+  CreateTask:
+    !Equals ['true', !Ref CreatesecondTable]
+
+Resources:
+  DynamoDBFirstTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref 'DBTableName1'
+      AttributeDefinitions:
+      - AttributeName: MSG_ID
+        AttributeType: S
+      #- AttributeName: FAIL_MSG_PAYLOAD
+      #  AttributeType: S
+      #- AttributeName: FAIL_MSG_ENDPOINT
+      #  AttributeType: S
+      - AttributeName: EXPIRATION
+        AttributeType: N
+      KeySchema:
+      - AttributeName: MSG_ID
+        KeyType: HASH
+      - AttributeName: EXPIRATION
+        KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: EXPIRATION
+        Enabled: 'true'
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'ReadCapacityUnits'
+        WriteCapacityUnits: !Ref 'WriteCapacityUnits'
+    
+      #GlobalSecondaryIndexes:
+      #- IndexName: !Join [ "-", [!Ref 'DBTableName1', GLOBAL] ]
+      #  KeySchema:
+      #  - AttributeName: FAIL_MSG_PAYLOAD
+      #    KeyType: HASH
+      #  - AttributeName: FAIL_MSG_ENDPOINT
+      #    KeyType: RANGE
+      #  Projection:
+      #   ProjectionType: ALL
+      #  ProvisionedThroughput:
+      #    ReadCapacityUnits: !Ref 'ReadCapacityUnits'
+      #    WriteCapacityUnits: !Ref 'WriteCapacityUnits'
+  
+  DynamoDBSecondTable:
+    Condition: CreateTask
+    Type: AWS::DynamoDB::Table
+    DependsOn: "DynamoDBFirstTable"
+    Properties:
+      TableName: !Ref 'DBTableName2'
+      AttributeDefinitions:
+      - AttributeName: MSG_ID
+        AttributeType: S
+      #- AttributeName: FAIL_MSG_PAYLOAD
+      #  AttributeType: S
+      #- AttributeName: FAIL_MSG_ENDPOINT
+      #  AttributeType: S
+      - AttributeName: EXPIRATION
+        AttributeType: N
+      KeySchema:
+      - AttributeName: MSG_ID
+        KeyType: HASH
+      - AttributeName: EXPIRATION
+        KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: EXPIRATION
+        Enabled: 'true'
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'ReadCapacityUnits'
+        WriteCapacityUnits: !Ref 'WriteCapacityUnits'
+      
+      #GlobalSecondaryIndexes:
+      #- IndexName: !Join [ "-", [!Ref 'DBTableName2', GLOBAL] ]
+      #  KeySchema:
+      #  - AttributeName: FAIL_MSG_PAYLOAD
+      #    KeyType: HASH
+      #  - AttributeName: FAIL_MSG_ENDPOINT
+      #    KeyType: RANGE
+      #  Projection:
+      #   ProjectionType: ALL
+      #  ProvisionedThroughput:
+      #    ReadCapacityUnits: !Ref 'ReadCapacityUnits'
+      #    WriteCapacityUnits: !Ref 'WriteCapacityUnits'
+
+Outputs:
+  TableName1:
+    Value: !Select [1, !Split ['/', !GetAtt DynamoDBFirstTable.Arn]]
+    Description: Name of the first newly created DynamoDB tables
+  TableName2:
+    Condition: CreateTask
+    Value: !Select [1, !Split ['/', !GetAtt DynamoDBSecondTable.Arn]]
+    Description: Name of the second newly created DynamoDB tables
+
+  

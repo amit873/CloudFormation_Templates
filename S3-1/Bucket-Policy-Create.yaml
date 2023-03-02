@@ -1,0 +1,37 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template for s3 bucket. Bucket policy to allow read-only access to everyone
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Sub 'encryptedbucket-${AWS::Region}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+
+    DeletionPolicy: Delete
+
+  MyS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MyS3Bucket
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - 's3:GetObject'
+              - 's3:ListBucket'
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::${MyS3Bucket}
+              - !Sub arn:aws:s3:::${MyS3Bucket}/*
+            Principal:
+              AWS:
+                - '*'
+  
+Outputs:
+  S3Bucket:
+    Description: Bucket Created using this template.
+    Value: !Ref MyS3Bucket

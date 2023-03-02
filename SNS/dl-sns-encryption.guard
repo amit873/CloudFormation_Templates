@@ -1,0 +1,9 @@
+#
+# This document is used to SNS Encryption for both CMK and AMK keys
+#
+
+let snstopicencryption = Resources.*[ Type == 'AWS::SNS::Topic' ]
+
+rule ameintu_sns_topic_encryption when %snstopicencryption !empty{
+    %snstopicencryption.Properties.KmsMasterKeyId IN ['alias/aws/sns','alias/KMS-Amit']    
+}

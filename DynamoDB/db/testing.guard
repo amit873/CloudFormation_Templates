@@ -1,0 +1,57 @@
+
+# Select all DDB resources from the incoming template (payload)
+#
+let ddb = Resources.*[ Type == 'AWS::DynamoDB::Table'  ]
+let allowed_db_classification_tags = [ 'public', 'internal', 'confidential', 'restricted' ]
+
+#
+# Common rule, all resources must have Tags present on them
+#
+rule assert_resource_tags when %ddb !empty {
+    Resources.*.Properties.Tags !empty
+}
+
+
+rule ddb_tags_key when assert_resource_tags {
+    %ddb.Properties.Tags.*[ Key == 'dataClassification' ] !empty
+}
+
+rule ddb_tags_value when ddb_tags_key {
+     %ddb.Properties.Tags.*[ Value in %allowed_db_classification_tags ] !empty
+}
+
+rule encryption_case1 when ddb_tags_value {
+
+let encryption_check = %ddb[
+    some Properties.Tags[*] {
+        Value == 'restricted'
+    }
+]
+
+when %encryption_check !empty {
+    %encryption_check {
+        Properties.SSESpecification.SSEEnabled == true
+        Properties.SSESpecification.SSEType == 'AWS_CLOUDHSM'
+    }
+}
+
+}
+
+rule encryption_case2 when ddb_tags_value {
+
+let encryption_check = %ddb[
+    some Properties.Tags[*] {
+        Value == 'internal' or
+        Value == 'public' or
+        Value == 'confidential'
+    }
+]
+
+when %encryption_check !empty {
+    %encryption_check {
+        Properties.SSESpecification.SSEEnabled == true
+        Properties.SSESpecification.SSEType == 'KMS'
+    }
+}
+
+}

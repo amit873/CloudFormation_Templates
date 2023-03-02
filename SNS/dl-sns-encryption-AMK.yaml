@@ -1,0 +1,27 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo template for Encrypted SNS Topic - AMK - AWS Managed Key
+
+Parameters:
+  NotificationEmailId:
+    Default: amitkumargupta@hotmail.com
+    Description: The email address for Subscription
+    Type: String
+
+Resources:
+
+  EncryptedSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:      
+      #TopicName: !Sub "${AWS::StackName}-EncryptedSNSTopic"
+      TopicName: SNS-Topic-Name
+      KmsMasterKeyId: alias/aws/sns
+      Subscription:
+        - Endpoint: !Ref NotificationEmailId
+          Protocol: email
+
+Outputs:
+  EmailID:
+    Value: !Ref NotificationEmailId
+  TopicArn:
+    Value: !Ref EncryptedSNSTopic

@@ -1,0 +1,54 @@
+#
+# This document is used to Lambda Encryption
+#
+
+let lambdatopicencryption = Resources.*[ Type == 'AWS::Lambda::Function' ]
+let allowed_classification_tags = [ 'public', 'internal', 'confidential', 'restricted' ]
+
+rule assert_resource_tags when %lambdatopicencryption !empty {
+    %lambdatopicencryption.Properties.Tags !empty
+}
+
+
+rule lambda_tags_key when assert_resource_tags {
+    %lambdatopicencryption.Properties.Tags.*[ Key == 'dataClassification' ] !empty
+}
+
+rule lambda_tags_value when lambda_tags_key {
+    %lambdatopicencryption.Properties.Tags.*[ Value in %allowed_classification_tags ] !empty
+}
+
+rule encryption_case1 when lambda_tags_value {
+
+let encryption_check = %lambdatopicencryption[
+    some Properties.Tags[*] {
+        Value == 'restricted'
+    }
+]
+
+when %encryption_check !empty {
+    %encryption_check {
+        Properties.KmsKeyArn IN ['alias/aws/lambda']
+        Properties.key_type == 'AWS_CLOUDHSM'
+    }
+}
+}
+
+
+rule encryption_case2 when lambda_tags_value {
+
+let encryption_check = %lambdatopicencryption[
+    some Properties.Tags[*] {
+        Value == 'internal' or
+        Value == 'public' or
+        Value == 'confidential'
+    }
+]
+
+when %encryption_check !empty {
+    %encryption_check {
+        Properties.KmsKeyArn IN ['alias/aws/lambda']
+        Properties.key_type == 'KMS'
+    }
+}
+}

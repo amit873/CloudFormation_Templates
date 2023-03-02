@@ -1,0 +1,9 @@
+{ 
+  "Parameters": {
+     "ReadCapacityUnits": "12",
+     "WriteCapacityUnits": "12",
+     "DBTableName1": "FlightPlan-Failure",
+     "DBTableName2": "Region-Failure",
+     "CreatesecondTable": "true"
+  }
+}

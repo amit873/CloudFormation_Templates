@@ -1,0 +1,729 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 3rd party git integration with CodePipeline
+Metadata:
+  LICENSE: >-
+    Copyright     
+Parameters:
+  GitPullLambdaSubnet:
+    Description: Atleast 2 subnets need to be selected.The subnet that the git pull Lambda function  and CodeBuild will be deployed in. This should be a private subnet with a NAT gateway and your source control should be accessible from this subnet.
+    Type: 'List<AWS::EC2::Subnet::Id>'
+  GitPullLambdaVpc:
+    Description: The VPC you want to deploy the Git Pull lambda function and CodeBuild into.
+    Type: 'AWS::EC2::VPC::Id'
+    Default: ''
+  SecurityGroup:
+    Description: Select "git-custom-source-GitPullSecurityGroup-****"
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Default: ''
+  BuildSpecGitRef:
+    Description: 'Provide Git Branch name or Release Tag(Example: 1.0.0) of the git repo that contains buildspecs'
+    Type: String
+    Default: 'master'
+  BuildSpecGitUrl:
+    Description: 'Git repo clone URL for Buildspecs repo.'
+    Type: String
+    Default: '/aws-devsecops/buildspecs.git
+  BuildSpecContextPath:
+    Description: If the project is in a sub directory, provide the context path (ex... ./src)
+    Type: String
+    Default: '.'
+  AppCodeGitRef:
+    Description: 'Git branch or Release Tag (Example: 1.0.0) to pull the application code.'
+    Type: String
+    Default: 'master'
+  AppCodeGitUrl:
+    Description: 'Git repo clone URL for Application repo.
+    Type: String
+  AppCodeContextPath:
+    Description: If the application code is in a sub directory, provide the context path
+    Type: String
+    Default: '.'
+  BuildSpecAccessTokenUserName:
+    Description: The access token for the BuildSpec repo.
+    Type: String
+  BuildSpecAccessTokenPassword:
+    Description: The access token for the BuildSpec repo.
+    Type: String
+    NoEcho: 'true'
+  AppCodeAccessTokenUserName:
+    Description: The access token for the Application Code repo.
+    Type: String
+  AppCodeAccessTokenPassword:
+    Description: The access token for the Application Code repo.
+    Type: String
+    NoEcho: 'true'
+  AppName:
+    Type: String
+    Description: The name of the application for which we are building this CI/CD pipeline
+    Default: java-hello
+  SkipVScan:
+    Description: Do you want to skip veracode scan for this application?
+    Default: "Yes"
+    Type: String
+    AllowedValues: ["Yes", "No"]
+  AppRuntime:
+    Description: Choose the runtime used by your application.
+    Default: "Java-Maven"
+    Type: String
+    AllowedValues:
+      - "Java-Maven"
+      - "NodeJS"
+  VAppName:
+    Type: String
+    Description: The name of an existing veracode application
+    Default: "Hello World"
+  VSbxName:
+    Type: String
+    Description: The name of an exisitng veracode application sandbox
+    Default: devsecops-aws-java11
+  CodeBuildImage:
+    Type: String
+    Default: aws/codebuild/standard:5.0
+  ComputeType:
+    Type: String
+    Default: BUILD_GENERAL1_SMALL
+  ReleaseVersion:
+    Description: Release tag version of the artifact from gitlab
+    Type: String
+Mappings:
+  Runtimes:
+    Java-Maven:
+      BuildspecLint: "java-maven/lint.yml"
+      BuildspecCompile: "java-maven/compile.yml"
+      BuildspecDepCheck: "java-maven/dependency-check.yml"
+      BuildspecUnitTest: "java-maven/unit-test.yml"
+      BuildspecCodeCoverage: "java-maven/code-coverage.yml"
+      BuildSpecMutationTest: "java-maven/mutation-test.yml"
+      BuildSpecStaticScan: "java-maven/static-security-scan.yml"
+      BuildSpecPackage: "java-maven/package.yml"
+    NodeJS:
+      BuildspecLint: "Nodejs/lint.yml"
+      BuildspecCompile: "Nodejs/compile.yml"
+      BuildspecDepCheck: "Nodejs/dependency-check.yml"
+      BuildspecUnitTest: "Nodejs/unit-test.yml"
+      BuildspecCodeCoverage: "Nodejs/code-coverage.yml"
+      BuildSpecMutationTest: "Nodejs/mutation-test.yml"
+      BuildSpecStaticScan: "Nodejs/static-security-scan.yml"
+      BuildSpecPackage: "Nodejs/package.yml"
+
+
+Resources:
+
+  BuildSpecAccessTokenSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: The user and access token for the Build Spec project
+      SecretString: !Sub "${BuildSpecAccessTokenUserName}:${BuildSpecAccessTokenPassword}"
+  AppCodeAccessTokenSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: The user and access token for the Application Code project
+      SecretString: !Sub "${AppCodeAccessTokenUserName}:${AppCodeAccessTokenPassword}"
+
+
+  CodeLint:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "CodeLint"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildspecLint]
+
+  Compile:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "Compile"
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildspecCompile]
+
+  DependencyScan:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "DependencyScan"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildspecDepCheck]
+
+  UnitTest:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "UnitTest"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildspecUnitTest]
+
+  CodeCoverage:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "CodeCoverage"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildspecCodeCoverage]
+
+  MutationTest:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "MutationTest"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildSpecMutationTest]
+
+  VeracodeScan:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "VeracodeScan"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildSpecStaticScan]
+
+  Package:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      VpcConfig:
+        VpcId: !Ref GitPullLambdaVpc
+        SecurityGroupIds: !Ref SecurityGroup
+        Subnets: !Ref GitPullLambdaSubnet
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: !Ref ComputeType
+        Image: !Ref CodeBuildImage
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodePieplineCWLogGrp
+          StreamName: "Package"
+      ServiceRole: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codebuild-role'
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !FindInMap [Runtimes, !Ref AppRuntime, BuildSpecPackage]
+
+  Pipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location: !Sub "gitlab-custom-source-artifactstore-${AWS::AccountId}"
+        EncryptionKey:
+          Id: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/gitlab-codepipeline-cmk"
+          Type: KMS
+      Name: !Sub "${AppName}-pipeline"
+      RoleArn: !Sub 'arn:aws:iam::${AWS::AccountId}:role/delegate-admin-codepipeline-role'
+      RestartExecutionOnUpdate: true
+      Stages:
+        - Name: 'Source'
+          Actions:
+            - Name: 'BuildSpecSource'
+              ActionTypeId:
+                Category: 'Source'
+                Owner: 'Custom'
+                Version: 1
+                Provider: 'xyzGitLab'
+              OutputArtifacts:
+                - Name: MyAppBuildSpec
+              Configuration:
+                Branch: !Ref BuildSpecGitRef
+                GitUrl: !Ref BuildSpecGitUrl
+                ContextPath: !Ref BuildSpecContextPath
+                PipelineName: !Sub "${AppName}-pipeline"
+                AccessTokenSecretKeyName: !Ref BuildSpecAccessTokenSecret
+              RunOrder: 1
+            - Name: 'AppCodeSource'
+              ActionTypeId:
+                Category: 'Source'
+                Owner: 'Custom'
+                Version: 1
+                Provider: 'xyzGitLab'
+              OutputArtifacts:
+                - Name: MyAppCode
+              Configuration:
+                Branch: !Ref AppCodeGitRef
+                GitUrl: !Ref AppCodeGitUrl
+                ContextPath: !Ref AppCodeContextPath
+                PipelineName: !Sub "${AppName}-pipeline"
+                AccessTokenSecretKeyName: !Ref AppCodeAccessTokenSecret
+              RunOrder: 1
+        - Name: 'CodeBuild-CI'
+          Actions:
+            - Name: 'CodeLint'
+              ActionTypeId:
+                Category: 'Build'
+                Owner: 'AWS'
+                Version: '1'
+                Provider: 'CodeBuild'
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+              OutputArtifacts:
+                - Name: MyAppLint
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                ProjectName: !Ref CodeLint
+                PrimarySource: MyAppBuildSpec
+              RunOrder: 1
+
+            - Name: Compile
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+              OutputArtifacts:
+                - Name: MyAppcompile
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                ProjectName: !Ref Compile
+                PrimarySource: MyAppBuildSpec
+              RunOrder: 1
+
+            - Name: DependencyScan
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+              OutputArtifacts:
+                - Name: MyAppScan
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                ProjectName: !Ref DependencyScan
+                PrimarySource: MyAppBuildSpec
+                EnvironmentVariables: !Sub '[{"type":"PARAMETER_STORE","name":"DC_RETIREJS","value":"/xyz/dependency-check/retirejs"},
+                {"type":"PARAMETER_STORE","name":"DC_URLBASE","value":"/xyz/dependency-check/cveUrlBase"},
+                {"type":"PARAMETER_STORE","name":"DC_URLMODIFIED","value":"/xyz/dependency-check/cveUrlModified"}]'
+              RunOrder: 1
+
+            - Name: UnitTest
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+              OutputArtifacts:
+                - Name: MyAppUnitTest
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                ProjectName: !Ref UnitTest
+                PrimarySource: MyAppBuildSpec
+              RunOrder: 1
+
+            - Name: MutationTestAndSonar
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+                #- Name: MyAppUnitTest
+                - Name: MyAppcompile
+              OutputArtifacts: []
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                ProjectName: !Ref MutationTest
+                PrimarySource: MyAppBuildSpec
+                EnvironmentVariables: !Sub '[{"type":"SECRETS_MANAGER", "name":"SQ_AUTH", "value":"sonarqube:auth_token"}]'
+              RunOrder: 2
+
+            - Name: CodeCoverage
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                #- Name: MyAppCode
+                - Name: MyAppUnitTest
+              OutputArtifacts: []
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                PrimarySource: MyAppBuildSpec
+                ProjectName: !Ref CodeCoverage
+              RunOrder: 2
+
+            - Name: VeracodeScan
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+                - Name: MyAppcompile
+              OutputArtifacts: []
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                ProjectName: !Ref VeracodeScan
+                PrimarySource: MyAppBuildSpec
+                EnvironmentVariables: !Sub '[{"type":"PARAMETER_STORE","name":"V_JAR_URL","value":"/xyz/veracode/api_wrapper_jar_url/nexus_url"},
+                {"type":"PLAINTEXT","name":"VSBXNAME","value":"${VSbxName}"},
+                {"type":"SECRETS_MANAGER", "name":"SQ_AUTH", "value":"sonarqube:auth_token"},
+                {"type":"SECRETS_MANAGER", "name":"VID", "value":"vc-${AppName}:ID"},
+                {"type":"SECRETS_MANAGER","name":"VKEY","value":"vc-${AppName}:secret"},
+                {"type":"PLAINTEXT","name":"SK_VSCAN","value":"${SkipVScan}"},
+                {"type":"PLAINTEXT","name":"V_APPNAME","value":"${VAppName}"}]'
+              RunOrder: 2
+
+            - Name: Package
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: MyAppBuildSpec
+                - Name: MyAppCode
+                - Name: MyAppcompile
+              OutputArtifacts:
+                - Name: MyAppBuilt
+              Configuration:
+                #BatchEnabled: 'true'
+                #CombineArtifacts: 'true'
+                PrimarySource: MyAppBuildSpec
+                ProjectName: !Ref Package
+                EnvironmentVariables: !Sub '[{"name":"SOURCE_BUCKET","value":"gitlab-custom-source-artifactstore-${AWS::AccountId}","type":"PLAINTEXT"}]'
+              RunOrder: 3
+
+        - Name: 'Deploy-cft-sanity-test'
+          Actions:
+            - Name: CreateChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CHANGE_SET_REPLACE
+                Capabilities: CAPABILITY_IAM
+                TemplatePath: MyAppBuilt::packaged.yml
+                ChangeSetName:
+                  Fn::Sub: ${AppName}-dev-changeset
+                StackName:
+                  Fn::Sub: ${AppName}-dev
+                RoleArn:
+                  Fn::GetAtt: CloudFormationServiceRole.Arn
+              InputArtifacts:
+                - Name: MyAppBuilt
+              RunOrder: 1
+
+            - Name: ChangesetExecutionApproval
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              RunOrder: 2
+
+            - Name: ExecuteChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName:
+                  Fn::Sub: ${AppName}-dev-changeset
+                StackName:
+                  Fn::Sub: ${AppName}-dev
+                RoleArn:
+                  Fn::GetAtt: CloudFormationServiceRole.Arn
+              RunOrder: 3
+
+  AppCodePipelineWebhook:
+    Type: "AWS::CodePipeline::Webhook"
+    Properties:
+      TargetPipeline: !Ref Pipeline
+      TargetPipelineVersion: 1
+      TargetAction: Source
+      Filters:
+        - JsonPath: '$.ref'
+          MatchEquals: !Sub 'refs/heads/${AppCodeGitRef}'
+      Authentication: IP
+      AuthenticationConfiguration:
+        AllowedIPRange: '205.174.22.25/32'
+      RegisterWithThirdParty: false
+
+#
+  # Service role according to https://docs.aws.amazon.com/lambda/latest/dg/build-pipeline.html
+  #
+  CloudFormationServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub delegate-admin-cf-${AppName}-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:aws:iam::${AWS::AccountId}:policy/cft-developer-iam-access-policy
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+      PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/cft-developer-boundary-policy
+      Policies:
+        - PolicyName: CloudFormationPolicy-Inline
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - Fn::Sub: arn:aws:s3:::gitlab-custom-source-artifactstore-${AWS::AccountId}/*
+              - Effect: Allow
+                Action:
+                  - lambda:*
+                Resource:
+                  - Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*
+              - Effect: Allow
+                Action:
+                  - lambda:GetEventSourceMapping
+                  - lambda:CreateEventSourceMapping
+                  - lambda:DeleteEventSourceMapping
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - apigateway:*
+                Resource:
+                  - Fn::Sub: arn:aws:apigateway:${AWS::Region}::*
+              - Effect: Allow
+                Action:
+                  - sns:*
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - sqs:*
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:PutRolePolicy
+                Resource:
+                  - Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/*
+              - Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:DetachRolePolicy
+                Resource:
+                  - Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/*
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                Resource:
+                  - Fn::Sub: arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+                  - Fn::Sub: arn:aws:cloudformation:${AWS::Region}:aws:transform/Include
+              - Effect: Allow
+                Action:
+                  - codedeploy:CreateApplication
+                  - codedeploy:DeleteApplication
+                  - codedeploy:RegisterApplicationRevision
+                Resource:
+                  - Fn::Sub: arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:application:*
+              - Effect: Allow
+                Action:
+                  - codedeploy:CreateDeploymentGroup
+                  - codedeploy:CreateDeployment
+                  - codedeploy:GetDeployment
+                Resource:
+                  - Fn::Sub: arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:*
+              - Effect: Allow
+                Action:
+                  - codedeploy:GetDeploymentConfig
+                Resource:
+                  - Fn::Sub: arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentconfig:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:*
+                Resource:
+                  - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub delegate-admin-lambda-${AppName}-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub arn:aws:iam::${AWS::AccountId}:policy/cft-developer-iam-access-policy
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+      PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/cft-developer-boundary-policy
+      Policies:
+      - PolicyName: logAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+
+  CodePieplineCWLogGrp:  
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      #KmsKeyId: String
+      LogGroupName: !Sub "/aws/codebuild/codepipeline-${AppName}"
+      RetentionInDays: 30
+
+Outputs:
+  AppCodePipelineWebHookUrl:
+    Value: !GetAtt AppCodePipelineWebhook.Url
+  version:
+    Value: !Ref ReleaseVersion

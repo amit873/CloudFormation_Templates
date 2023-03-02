@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create S3 Buckets for s360 workshop
+
+Parameters:
+  ProjectName:
+    ConstraintDescription: Project name that will be used as the prefix for all deployed resources
+    Default: s360
+    Description: Project name that will be used as the prefix for all deployed resources
+    Type: String
+
+  BucketNameSuffix:
+    ConstraintDescription: Bucket name suffix (e.g., global unique id); prefix is ${ProjectName}-${AssetType}-
+    Description: Bucket name suffix (e.g., global unique id); prefix is ${ProjectName}-${AssetType}-
+    Type: String
+
+  ProjectKeyArn:
+    ConstraintDescription: Project KMS Key ARN
+    Description: Project KMS Key ARN
+    Type: String
+
+Resources:
+  #########################
+  #
+  # Curated Data Bucket
+  #
+  #########################
+  CuratedDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref ProjectKeyArn
+              SSEAlgorithm: 'aws\:kms'
+      BucketName: !Sub ${ProjectName}-curated-${BucketNameSuffix}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+      VersioningConfiguration:
+        Status: Enabled
+
+  CuratedDataBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref CuratedDataBucket
+      PolicyDocument:
+        Id: S3 Put Object Policy
+        Version: 2012-10-17
+        Statement:
+          - Sid: Require SSE-KMS Encryption
+            Action:
+              - s3\:PutObject
+            Condition:
+              StringNotEquals:
+                's3\:x-amz-server-side-encryption': 'aws\:kms'
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Sub 'arn\:aws\:s3:::${CuratedDataBucket}/*'
+          - Sid: Require SSE-KMS Encryption Key
+            Action:
+              - s3\:PutObject
+            Condition:
+              StringNotLikeIfExists:
+                's3\:x-amz-server-side-encryption-aws-kms-key-id': !Ref ProjectKeyArn
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Sub 'arn\:aws\:s3:::${CuratedDataBucket}/*'
+
+  #########################
+  #
+  # Query Results Bucket
+  #
+  #########################
+  QueryResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref ProjectKeyArn
+              SSEAlgorithm: 'aws\:kms'
+      BucketName: !Sub ${ProjectName}-query-results-${BucketNameSuffix}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+      VersioningConfiguration:
+        Status: Enabled
+
+  QueryResultsBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref QueryResultsBucket
+      PolicyDocument:
+        Id: S3 Put Object Policy
+        Version: 2012-10-17
+        Statement:
+          - Sid: Require SSE-KMS Encryption
+            Action:
+              - s3\:PutObject
+            Condition:
+              StringNotEquals:
+                's3\:x-amz-server-side-encryption': 'aws\:kms'
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Sub 'arn\:aws\:s3:::${QueryResultsBucket}/*'
+          - Sid: Require SSE-KMS Encryption Key
+            Action:
+              - s3\:PutObject
+            Condition:
+              StringNotLikeIfExists:
+                's3\:x-amz-server-side-encryption-aws-kms-key-id': !Ref ProjectKeyArn
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Sub 'arn\:aws\:s3:::${QueryResultsBucket}/*'
+
+  #########################
+  #
+  # Raw Data Bucket
+  #
+  #########################
+  RawDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref ProjectKeyArn
+              SSEAlgorithm: 'aws\:kms'
+      BucketName: !Sub ${ProjectName}-raw-${BucketNameSuffix}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+      VersioningConfiguration:
+        Status: Enabled
+
+  RawDataBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref RawDataBucket
+      PolicyDocument:
+        Id: S3 Put Object Policy
+        Version: 2012-10-17
+        Statement:
+          - Sid: Require SSE-KMS Encryption
+            Action:
+              - s3\:PutObject
+            Condition:
+              StringNotEquals:
+                's3\:x-amz-server-side-encryption': 'aws\:kms'
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Sub 'arn\:aws\:s3:::${RawDataBucket}/*'
+          - Sid: Require SSE-KMS Encryption Key
+            Action:
+              - s3\:PutObject
+            Condition:
+              StringNotLikeIfExists:
+                's3\:x-amz-server-side-encryption-aws-kms-key-id': !Ref ProjectKeyArn
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Sub 'arn\:aws\:s3:::${RawDataBucket}/*'
+
+  #########################
+  #
+  # Parameter Store Parameters
+  #
+  #########################
+  ParamCuratedDataBucketName:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Description: Curated Data Bucket Name
+      Name: /s360/s3/curated-data-bucket-name
+      Type: String
+      Value: !Ref CuratedDataBucket
+
+  ParamQueryResultsBucketName:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Description: Query Results Bucket Name
+      Name: /s360/s3/query-results-bucket-name
+      Type: String
+      Value: !Ref QueryResultsBucket
+
+  ParamRawDataBucketName:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Description: Raw Data Bucket Name
+      Name: /s360/s3/raw-data-bucket-name
+      Type: String
+      Value: !Ref RawDataBucket
+
+Outputs:
+  CuratedDataBucketName:
+    Description: Curated Data Bucket Name
+    Value: !Ref CuratedDataBucket
+
+  QueryResultsBucketName:
+    Description: Query Results Bucket Name
+    Value: !Ref QueryResultsBucket

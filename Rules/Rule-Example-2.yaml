@@ -1,0 +1,11 @@
+Rules:
+  IsSSLCertificate:
+    RuleCondition: !!Equals      
+      - Ref: UseSSL
+      - 'Yes'
+    Assertions:
+    - Assert: !Not        
+        - !Equals
+          - !Ref ALBSSLCertificateARN
+          - ''
+      AssertDescription: 'ACM Certificate value can not be empty if SSL is required'

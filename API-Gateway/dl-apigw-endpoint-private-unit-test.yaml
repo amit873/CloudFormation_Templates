@@ -1,0 +1,54 @@
+# Unit Test Cases for dl-apigw-endpoint-private
+---
+- name: MyTest1
+  input: {}
+  expectations:
+    rules:
+      ameintu_apigw_endpoint_private: SKIP
+- name: MyTest2
+  input:
+     Resources: {}
+  expectations:
+    rules:
+      ameintu_apigw_endpoint_private: SKIP
+- name: MyTest3
+  input:
+    Resources: 
+      apiGw:
+        Type: AWS::ApiGateway::RestApi
+  expectations:
+    rules:
+      ameintu_apigw_endpoint_private: FAIL
+- name: MyTest4
+  input:
+    Resources: 
+      apiGw:
+        Type: AWS::ApiGateway::RestApi
+        Properties:
+          EndpointConfiguration:
+            Types: "PRIVATE"
+  expectations:
+    rules:
+      ameintu_apigw_endpoint_private: PASS
+- name: MyTest5
+  input:
+    Resources: 
+      apiGw:
+        Type: AWS::ApiGateway::RestApi
+        Properties:
+          EndpointConfiguration:
+            Types: "REGIONAL"
+  expectations:
+    rules:
+      ameintu_apigw_endpoint_private: FAIL
+- name: MyTest5
+  input:
+    Resources: 
+      apiGw:
+        Type: AWS::ApiGateway::RestApi
+        Properties:
+          EndpointConfiguration:
+            Types: "EDGE"
+  expectations:
+    rules:
+      ameintu_apigw_endpoint_private: FAIL

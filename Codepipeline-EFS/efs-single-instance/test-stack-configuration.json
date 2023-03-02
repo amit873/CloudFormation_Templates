@@ -1,0 +1,8 @@
+{
+  "Parameters" : {    
+    "VPC" : "vpc-32825f4f",
+    "SubnetID1" : "subnet-5980013f",
+    "SubnetID2" : "subnet-9c0c80bd",
+    "SubnetID3" : "subnet-f88adbb5"
+  }
+}

@@ -1,0 +1,86 @@
+---
+  AWSTemplateFormatVersion: "2010-09-09"
+
+  Description: "IAM Users and Groups"
+
+  Parameters:
+    Password:
+      NoEcho: 'true'
+      Type: String
+      Description: New Account Password
+      MinLength: '4'
+      MaxLength: '20'
+      ConstraintDescription: The password must be between 1 and 41 characters
+
+  Resources:
+    # Creates a new IAM user
+    CFNUser:
+      Type: AWS::IAM::User
+      Properties:
+        LoginProfile:
+          Password: !Ref 'Password'
+    
+    # Creates a new group
+    CFNUserGroup:
+      Type: AWS::IAM::Group
+    
+    # Creates a new group
+    CFNAdminGroup:
+      Type: AWS::IAM::Group
+    
+    #  Adds the specified user to the specified group
+    Users:
+      Type: AWS::IAM::UserToGroupAddition
+      Properties:
+        GroupName: !Ref 'CFNUserGroup'
+        Users: [!Ref 'CFNUser']
+    
+    Admins:
+      Type: AWS::IAM::UserToGroupAddition
+      Properties:
+        GroupName: !Ref 'CFNAdminGroup'
+        Users: [!Ref 'CFNUser']
+
+    # Add Policy to CFNUserGroup Group - inline Policy
+    CFNUsersPolicies:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: CFNUsers
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['cloudformation:Describe*', 'cloudformation:List*', 'cloudformation:Get*']
+            Resource: '*'
+        Groups: [!Ref 'CFNUserGroup']
+          
+    # Add Policy to CFNAdminGroup Group - inline Policy
+    CFNAdminPolicies:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: CFNAdmins
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: cloudformation:*
+            Resource: '*'
+        Groups: [!Ref 'CFNAdminGroup']  
+        
+    # Creates a new AWS secret access key
+    CFNKeys:
+      Type: AWS::IAM::AccessKey
+      Properties:
+        UserName: !Ref 'CFNUser'
+
+  # Ouput
+  Outputs:
+    AccessKey:
+      Value: !Ref 'CFNKeys'
+      Description: AWS Access Key ID of New User
+
+    SecretKey:
+      Value: !GetAtt [CFNKeys, SecretAccessKey]
+      Description: AWS Securet Access Key of new User
+
+
+
+      

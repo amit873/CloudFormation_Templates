@@ -1,0 +1,191 @@
+# when no resources are defined
+---
+- name: No_resource
+  input:
+    Resources: {}
+  expectations:
+    rules:
+      assert_resource_tags: FAIL
+      sns_tags_key: SKIP
+      sns_tags_value: SKIP
+      encryption_case1: SKIP
+      encryption_case2: SKIP
+
+# when resource defined but no tags
+- name: MyTest2
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          SSESpecification:            
+            KmsMasterKeyId: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: FAIL
+      sns_tags_key: SKIP
+      sns_tags_value: SKIP
+      encryption_case1: SKIP
+      encryption_case2: SKIP
+
+# when tags key value is public & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest3
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: public
+          SSESpecification:            
+            KmsMasterKeyId: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is confidential & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest4
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: confidential
+          SSESpecification:            
+            KmsMasterKeyId: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is internal & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest5
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: internal
+          SSESpecification:            
+            KmsMasterKeyId: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: FAIL
+
+# when tags key value is restricted & encryption_type is AWS_CLOUDHSM with encryption_enable as true
+- name: MyTest6
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: restricted
+          SSESpecification:            
+            KmsMasterKeyId: AWS_CLOUDHSM
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: PASS
+      encryption_case2: SKIP
+
+# when tags key value is restricted & encryption_type is KMS with encryption_enable as true
+- name: MyTest7
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: restricted
+          SSESpecification:            
+            KmsMasterKeyId: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: FAIL
+      encryption_case2: SKIP
+
+# when tags key value is public & encryption_type is KMS with encryption_enable as true
+- name: MyTest8
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: public
+          SSESpecification:            
+            KmsMasterKeyId: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: PASS
+    
+# when tags key value is internal & encryption_type is KMS with encryption_enable as true
+
+- name: MyTest9
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: internal
+          SSESpecification:            
+            KmsMasterKeyId: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: PASS
+
+# when tags key value is confidential & encryption_type is KMS with encryption_enable as true
+- name: MyTest10
+  input:
+    Resources: 
+      sns:
+        Type: 'AWS::SNS::Topic'
+        Properties:
+          Tags:
+            - Key: dataClassification
+              Value: confidential
+          SSESpecification:            
+            KmsMasterKeyId: KMS
+  expectations:
+    rules:
+      assert_resource_tags: PASS
+      sns_tags_key: PASS
+      sns_tags_value: PASS
+      encryption_case1: SKIP
+      encryption_case2: PASS
+      

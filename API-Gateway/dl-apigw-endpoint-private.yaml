@@ -1,0 +1,16 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template for ApiGateway instances deployed must be private
+
+Resources: 
+  apiGw:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: APT-Gateway-Name
+      EndpointConfiguration:
+        Types: "PRIVATE"
+
+Outputs:
+  APIGateway:
+    Description: This document is used to ApiGateway instances deployed must be private
+    Value: !Ref apiGw
